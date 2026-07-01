@@ -5,7 +5,7 @@
 
 class Integrator{
 public:
-    Integrator();
+    Integrator() = default();
 
     void EulerIntegration(Body& AnyBody, const Vec3& Force);
 private:

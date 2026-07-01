@@ -7,7 +7,7 @@
 
 class WorldPhysics{
 public:
-    WorldPhysics();
+    WorldPhysics() = default();
     WorldPhysics(int Steps) : Steps(Steps) {}
 
     void StartSimulation();

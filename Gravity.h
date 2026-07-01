@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Body.h"
-#include <Vec3.h>
+#include "Vec3.h"
 
 class Gravity{
 public:
-    Gravity();
+    Gravity() = default();
 
     Vec3 ComputeGravityForce(const Body& BodyA, const Body& BodyB) const;
 private:
