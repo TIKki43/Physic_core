@@ -5,7 +5,7 @@
 
 class Gravity{
 public:
-    Gravity() = default();
+    Gravity() = default;
 
     Vec3 ComputeGravityForce(const Body& BodyA, const Body& BodyB) const;
 private:
