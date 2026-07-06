@@ -10,7 +10,7 @@ void WorldPhysics::StartSimulation(){
 }
 
 // NBody gravitational simulation step 
-void WorldPhysics::SimulationStep(){
+void WorldPhysics::SimulationStep(float DeltaTime){
     std::vector<Vec3> Forces(Bodies.size());
     for (int i = 0; i < Bodies.size(); ++i){
         for (int j = i + 1; j < Bodies.size(); ++j){
@@ -20,7 +20,7 @@ void WorldPhysics::SimulationStep(){
         }
     }
     for (int i = 0; i < Bodies.size(); i++){
-        Euler.EulerIntegration(Bodies[i], Forces[i]);
+        Euler.EulerIntegration(Bodies[i], Forces[i], DeltaTime);
     }
 }
 
