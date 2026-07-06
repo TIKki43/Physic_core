@@ -13,3 +13,4 @@ Release/
 *.log
 promts.md
 CLAUDE.md
+.gitignore
