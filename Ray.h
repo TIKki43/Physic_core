@@ -16,8 +16,11 @@ public:
     void SetDirection(const Vec3& Direction);
     Vec3 GetDirection() const;
 
-
-    float TravelDistance = 0.0f;
+    float GetTravelDistance() const;
+    float GetTravelTime() const;
+    
+    float AdvanceByTime(const float DeltaTime);
+    float AdvanceByDistance(const float DeltaDistance);
 
     bool Active = true;
 
@@ -27,5 +30,11 @@ private:
     float Wavelength;
     float Intensity;
     float WaveSpeed;
+
+    float DeltaTime;
+    float DeltaDistance;
+    float TravelTime = 0.0f;
+    float TravelDistance = 0.0f;
+    
     
 };
