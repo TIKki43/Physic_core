@@ -13,3 +13,12 @@ void RayTracer::RaySimulationStep(float Deltatime)
         }
     }
 }
+
+void RayTracer::SchwarzschildSimulationStep(Body& MassiveBody)
+{
+    for (Ray& ray : Rays) {
+        if (ray.Active){
+            ray.SchwarzschildStep(MassiveBody);
+        }
+    }
+}

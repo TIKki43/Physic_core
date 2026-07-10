@@ -1,5 +1,7 @@
 #pragma once
 #include "Vec3.h"
+#include "Body.h"
+#include "Constants.h"
 
 class Ray{
 public:
@@ -22,6 +24,18 @@ public:
     float AdvanceByTime(const float DeltaTime);
     float AdvanceByDistance(const float DeltaDistance);
 
+    void InitSchwarzschildMetricState
+                            ( Body& MassiveBody
+                            , float InitialE
+                            , float InitialL
+                            , float Initialt
+                            , float Initialc = Constants::c
+                            , float InitialG = Constants::G
+                            , float Initialdlambda = Constants::DefaultDeltaTime
+    );
+    void SchwarzschildMetric(Body& MassiveBody);
+    void SchwarzschildStep(Body& MassiveBody);
+
     bool Active = true;
 
 private:
@@ -36,5 +50,15 @@ private:
     float TravelTime = 0.0f;
     float TravelDistance = 0.0f;
     
-    
+    float dlambda;
+    float t;
+    float E;
+    float L;
+    float M_geo;
+    float r;
+    float phi;
+    float p;
+    float f;
+    float G;
+    float c;
 };
