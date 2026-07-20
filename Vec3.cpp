@@ -3,40 +3,12 @@
 #include <cmath>
 #include <cassert>
 
-Vec3 Vec3::operator+(const Vec3& other) const { 
-    return Vec3(x + other.x, y + other.y, z + other.z); 
-}
-
-Vec3 Vec3::operator-(const Vec3& other) const {
-    return Vec3(x - other.x, y - other.y, z - other.z);
-}
-
-Vec3& Vec3::operator+=(const Vec3& other)  { 
-    x += other.x;
-    y += other.y;
-    z += other.z;
-    return *this;
-}
-
-Vec3& Vec3::operator-=(const Vec3& other)  { 
-    x -= other.x;
-    y -= other.y;
-    z -= other.z;
-    return *this;
-}
-
-Vec3 Vec3::operator*(float scalar) const { 
-    return Vec3(x * scalar, y * scalar, z * scalar); 
-}
-
-Vec3 Vec3::operator/(float scalar) const { 
-    return Vec3(x / scalar, y / scalar, z / scalar); 
-}
-
+// NOTE: the +,-,*,/,+=,-=,Dot,Cross,LengthSquared operators are now defined
+// inline (constexpr) in Vec3.h. Only these three remain out-of-line.
 
 void Vec3::Normalize() {
     float length = this->Length();
-    assert (length > 0.00001f); 
+    assert (length > 0.00001f);
 
     float param = 1.0f / length;
     x *= param;
@@ -44,14 +16,6 @@ void Vec3::Normalize() {
     z *= param;
 }
 
-float Vec3::LengthSquared() const { return x * x + y * y + z * z; }
+double Vec3::Length() const { return std::sqrt(this->LengthSquared()); }
 
-float Vec3::Distance(const Vec3 &other) const { return Vec3(*this - other).Length(); }
-
-float Vec3::Dot(const Vec3 &other) const { return x * other.x + y * other.y + z * other.z; }
-
-Vec3 Vec3::Cross(const Vec3& other) const { 
-    return Vec3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x); 
-} 
-
-float Vec3::Length() const { return std::sqrt(this->LengthSquared()); }
+double Vec3::Distance(const Vec3 &other) const { return Vec3(*this - other).Length(); }

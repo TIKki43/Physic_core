@@ -36,7 +36,7 @@ public:
     void SchwarzschildMetric(Body& MassiveBody);
     void SchwarzschildStep(Body& MassiveBody);
 
-    bool Active = true;
+    bool Active{true};
 
 private:
     Vec3 Position;
@@ -47,8 +47,8 @@ private:
 
     float DeltaTime;
     float DeltaDistance;
-    float TravelTime = 0.0f;
-    float TravelDistance = 0.0f;
+    float TravelTime{};
+    float TravelDistance{};
     
     float dlambda;
     float t;

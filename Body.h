@@ -2,31 +2,36 @@
 
 #include "Vec3.h"
 #include <string>
+#include <Constants.h>
 
 class Body{
 public:
-    Body(Vec3 Velocity, Vec3 Position, float Mass, Vec3 Force = Vec3(), std::string BodyType = "") 
-        : Velocity(Velocity), Position(Position), Mass(Mass), Force(Force), BodyType(BodyType) {}
+    Body(Vec3 Velocity, Vec3 Position, double Mass, Vec3 Force = Vec3(), std::string BodyType = "") 
+        : Velocity(Velocity), Position(Position), Mass(Mass), MU(Mass*Constants::G), Force(Force), BodyType(BodyType) {}
 
-    Vec3 GetVelocity() const;
-    void SetVelocity(const Vec3& NewVelocity);
+    [[nodiscard]] Vec3 GetVelocity() const noexcept;
+    void SetVelocity(const Vec3& NewVelocity) noexcept;
 
-    float GetMass() const;
-    void SetMass(float NewMass); 
+    [[nodiscard]] double GetMass() const noexcept;
+    void SetMass(double NewMass) noexcept; 
 
-    Vec3 GetPosition() const;
-    void SetPosition(const Vec3& NewPosition);
+    [[nodiscard]] double GetMU() const noexcept;
+    void SetMu(double NewMU) noexcept;
+
+    [[nodiscard]] Vec3 GetPosition() const noexcept;
+    void SetPosition(const Vec3& NewPosition) noexcept;
     
-    Vec3 GetForce() const;
-    void SetForce(const Vec3& NewForce);
+    [[nodiscard]] Vec3 GetForce() const noexcept;
+    void SetForce(const Vec3& NewForce) noexcept;
 
-    std::string GetBodyType() const;
-    void SetBodyType(std::string NewBodyType);
+    [[nodiscard]] const std::string& GetBodyType() const;
+    void SetBodyType(const std::string& NewBodyType);
 
 private:
     Vec3 Velocity;
     Vec3 Position;
-    float Mass;
+    double Mass;
+    double MU;
     Vec3 Force;
     std::string BodyType; // ToDo ENUM
 };

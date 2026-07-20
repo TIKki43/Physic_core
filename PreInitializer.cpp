@@ -1,7 +1,8 @@
 #include "PreInitializer.h"
 #include "Mat3.h"
 #include <cmath>
-#include "Constants.h"
+#include <stdexcept>
+#include <iostream>
 
 void PreInitializer::SetOrbit(
       Body& OrbitingBody
@@ -52,3 +53,125 @@ void PreInitializer::SetOrbit(
     OrbitingBody.SetPosition(CentralBody.GetPosition() + GeneralRotation * pos_3d);
     OrbitingBody.SetVelocity(CentralBody.GetVelocity() + GeneralRotation * v_3d);
 };
+
+namespace{
+    [[noreturn]] void panic(const std::string& message) {
+    std::cerr << message << std::endl;
+    std::abort();
+    };
+}
+
+void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
+                                            (      WorldPhysics& World
+                                            , const std::string& FilePath
+                                            , const std::string& Epoch
+                                            , const std::string& Frame
+                                            , const std::string& Abcorr
+                                            , const std::string& Observer
+                                            )
+{   
+   
+
+    SpiceChar noErrorPrint[] = "NONE";
+    SpiceChar returnAction[] = "RETURN";
+    
+    erract_c("SET", 0, returnAction);
+    errprt_c("SET", 0, noErrorPrint);
+
+    // Reading meta-kernel
+    furnsh_c(FilePath.c_str());
+    if (failed_c()) {
+        SpiceChar message[1024];
+        getmsg_c("LONG", sizeof(message), message);
+        reset_c();
+        kclear_c();
+
+        std::printf("Meta-kernel error: %s\n", message);
+        panic("Can't read meta-kernel!");
+    }
+    
+
+    // Epoch: 2005-01-01T00:00:00 UTC  -> ephemeris time(ET, seconds past J2000 TDB)
+    SpiceDouble et = 0.0;
+    str2et_c(Epoch.c_str(), &et);
+    if (failed_c()) {
+        SpiceChar message[1024];
+        getmsg_c("LONG", sizeof(message), message);
+        reset_c();
+        kclear_c();
+
+        std::printf("Epoch error: %s\n", message);
+        panic("Can't find epoch in time intervals!");
+    }
+
+    
+    // (J2000) inertial reference frame
+    const SpiceChar* frame = Frame.c_str();
+    // (None) geometric(no aberration)                 
+    const SpiceChar* abcorr = Abcorr.c_str();
+    // SSB observer                  
+    const SpiceChar* observer = Observer.c_str(); 
+
+    
+    struct Planet { 
+        const char* name; 
+        const char* bary; 
+
+        SpiceDouble GM{}; 
+        SpiceDouble state[6]{};  // [0-2]pos km / [3-5]velocity km / s
+    };
+
+    Planet planets[9] = {
+        {"SUN", "SUN"},
+        {"MERCURY", "MERCURY BARYCENTER"},
+        {"VENUS",   "VENUS BARYCENTER"},
+        {"EARTH",   "EARTH BARYCENTER"},
+        {"MARS",    "MARS BARYCENTER"},
+        {"JUPITER", "JUPITER BARYCENTER"},
+        {"SATURN",  "SATURN BARYCENTER"},
+        {"URANUS",  "URANUS BARYCENTER"},
+        {"NEPTUNE", "NEPTUNE BARYCENTER"},
+    };
+
+    for (int i = 0; i < 9; ++i) {
+        SpiceDouble lt = 0.0;
+        SpiceInt dimension;
+        spkezr_c(planets[i].bary, et, frame, abcorr, observer, planets[i].state, &lt);
+        if (failed_c()) {
+            SpiceChar shortmsg[26];
+            getmsg_c("SHORT", sizeof(shortmsg), shortmsg);
+            reset_c();
+            std::printf("%-18s : unavailable -> %s\n", planets[i].bary, shortmsg);
+            kclear_c();
+            panic("No enough data to spkezr_c!");
+        }
+
+        std::printf("%-18s : X = %20.3f   Y = %20.3f   Z = %20.3f  [km]\n",
+                    planets[i].bary, planets[i].state[0], planets[i].state[1], planets[i].state[2]);
+
+        bodvrd_c(planets[i].bary, "GM", 1, &dimension, &planets[i].GM);
+        if (failed_c()) {
+            SpiceChar message[1024];
+            getmsg_c("LONG", sizeof(message), message);
+            reset_c();
+
+            std::printf(
+                "%-18s : GM unavailable -> %s\n",
+                planets[i].bary,
+                message
+            );
+            kclear_c();
+            panic("No enough data to bodvrd_c!");
+        }
+    }
+
+    for (int i = 0; i < 9; i++){
+        Vec3 position(planets[i].state[0] * 1000.0, planets[i].state[1] * 1000.0, planets[i].state[2] * 1000.0); // m
+        Vec3 velocity(planets[i].state[3] * 1000.0, planets[i].state[4] * 1000.0, planets[i].state[5] * 1000.0); // m / s
+        double MU_SI = planets[i].GM * 1e9; // m^3 * s^-2
+        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), planets[i].name);
+        World.AddBody(Object);
+    }
+
+    kclear_c();
+}   

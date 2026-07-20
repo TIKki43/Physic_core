@@ -9,8 +9,8 @@ Vec3 Gravity::ComputeGravityForce(const Body& BodyA, const Body& BodyB) const {
     Vec3 NormRadialVector = (BodyBPos - BodyAPos); 
     NormRadialVector.Normalize(); // Normalized direction
 
-    float r = (BodyAPos - BodyBPos).LengthSquared(); // Squared distance between two bodies
+    double r = (BodyAPos - BodyBPos).LengthSquared(); // Squared distance between two bodies
 
-    float GravityForce = (Constants::G * (BodyA.GetMass() * BodyB.GetMass())) / r; 
+    double GravityForce = (BodyA.GetMass() * BodyB.GetMU()) / r; 
     return NormRadialVector * GravityForce;
 }
