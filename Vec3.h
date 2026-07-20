@@ -5,9 +5,6 @@ public:
     constexpr Vec3(double x, double y, double z) noexcept
         : x(x), y(y), z(z) {}
 
-    // constexpr members are defined inline here (a constexpr function must be
-    // defined in every translation unit that uses it). Only the non-constexpr
-    // Normalize / Length / Distance live in Vec3.cpp.
     [[nodiscard]] constexpr Vec3 operator+(const Vec3& other) const noexcept {
         return Vec3(x + other.x, y + other.y, z + other.z);
     }
