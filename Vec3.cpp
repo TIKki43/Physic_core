@@ -3,9 +3,6 @@
 #include <cmath>
 #include <cassert>
 
-// NOTE: the +,-,*,/,+=,-=,Dot,Cross,LengthSquared operators are now defined
-// inline (constexpr) in Vec3.h. Only these three remain out-of-line.
-
 void Vec3::Normalize() {
     float length = this->Length();
     assert (length > 0.00001f);
