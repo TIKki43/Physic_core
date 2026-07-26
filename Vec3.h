@@ -1,7 +1,9 @@
 #pragma once
+
+#include <cmath>
 class Vec3{
 public:
-    constexpr Vec3() noexcept = default;
+    constexpr Vec3() noexcept = default; // без вот этогго не работает
     constexpr Vec3(double x, double y, double z) noexcept
         : x(x), y(y), z(z) {}
 
@@ -30,14 +32,14 @@ public:
     void Normalize();
 
     [[nodiscard]] constexpr double Dot(const Vec3& other) const noexcept {
-        return x * other.x + y * other.y + z * other.z;
+        return std::fma(x, other.x, std::fma(y, other.y, z * other.z));
     }
     [[nodiscard]] constexpr Vec3 Cross(const Vec3& other) const noexcept {
-        return Vec3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+        return Vec3(std::fma(y, other.z, -z * other.y), std::fma(z, other.x, -x * other.z), std::fma(x, other.y, -y * other.x));
     }
     [[nodiscard]] double Length() const;
     [[nodiscard]] constexpr double LengthSquared() const noexcept {
-        return x * x + y * y + z * z;
+        return std::fma(x, x, std::fma(y, y, z * z));
     }
     [[nodiscard]] double Distance(const Vec3& other) const;
 

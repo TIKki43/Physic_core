@@ -23,7 +23,7 @@ void PreInitializer::SetOrbit(
     // Newton-Raphson method
     // f = E - esin(E) - M
     // f' = 1 - ecos(E)
-    for (int j = 0; j < 15; ++j){
+    for (std::size_t j{}; j < 15; ++j){
         float f = E - e * std::sin(E) - M;
         float fp = 1.0f - e * std::cos(E);
         E = E - f/fp;
@@ -133,7 +133,7 @@ void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
         {"NEPTUNE", "NEPTUNE BARYCENTER"},
     };
 
-    for (int i = 0; i < 9; ++i) {
+    for (std::size_t i{}; i < 9; ++i) {
         SpiceDouble lt = 0.0;
         SpiceInt dimension;
         spkezr_c(planets[i].bary, et, frame, abcorr, observer, planets[i].state, &lt);
@@ -165,7 +165,7 @@ void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
         }
     }
 
-    for (int i = 0; i < 9; i++){
+    for (std::size_t i{}; i < 9; i++){
         Vec3 position(planets[i].state[0] * 1000.0, planets[i].state[1] * 1000.0, planets[i].state[2] * 1000.0); // m
         Vec3 velocity(planets[i].state[3] * 1000.0, planets[i].state[4] * 1000.0, planets[i].state[5] * 1000.0); // m / s
         double MU_SI = planets[i].GM * 1e9; // m^3 * s^-2
