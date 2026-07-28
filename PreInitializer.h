@@ -12,9 +12,13 @@ namespace PreInitializer{
          const float Inclination, const float AscendingLongitude, const float Periapsis, const float MeanAnomaly);
     namespace Missions{
         namespace Cassini{
-            void SetBarycenterSolarSystem(WorldPhysics& World, const std::string& FilePath,
-                 const std::string& Epoch, const std::string& Frame = "J2000"
-                 , const std::string& Abcorr = "NONE", const std::string& Observer = "SOLAR SYSTEM BARYCENTER");
+            void SetBarycenterSolarSystem( WorldPhysics& World, const std::string& FilePath
+                                         , const std::string& Epoch, const std::string& Frame = "J2000"
+                                         , const std::string& Abcorr = "NONE", const std::string& Observer = "SOLAR SYSTEM BARYCENTER");
+            
+            void SetPhysicalSolarSystem( WorldPhysics& World, const std::string& FilePath
+                                       , const std::string& Epoch, const std::string& Frame = "J2000"
+                                       , const std::string& Abcorr = "None" , const std::string& Observer = "SOLAR SYSTEM BARYCENTER");
         }
     }
 

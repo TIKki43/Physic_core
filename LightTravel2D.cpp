@@ -1,4 +1,4 @@
-// g++ -std=c++17 -O2 -o LightTravelDemo2D.exe LightTravelDemo2D.cpp Body.cpp Vec3.cpp Mat3.cpp Gravity.cpp Integrator.cpp WorldPhysics.cpp PreInitializer.cpp Ray.cpp RayTracer.cpp -lraylib -lopengl32 -lgdi32 -lwinmm
+// g++ -std=c++20 -O2 -o LightTravelDemo2D.exe LightTravelDemo2D.cpp Body.cpp Vec3.cpp Mat3.cpp Gravity.cpp Integrator.cpp WorldPhysics.cpp PreInitializer.cpp Ray.cpp RayTracer.cpp -lraylib -lopengl32 -lgdi32 -lwinmm
 
 #include "Vec3.h"
 #include "Body.h"

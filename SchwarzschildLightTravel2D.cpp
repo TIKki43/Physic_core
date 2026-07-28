@@ -1,4 +1,4 @@
-// g++ -std=c++17 -O2 -static-libgcc -static-libstdc++ -o SchwarzschildLightTravelDemo2D.exe SchwarzschildLightTravelDemo2D.cpp Ray.cpp RayTracer.cpp Body.cpp Vec3.cpp -lraylib -lopengl32 -lgdi32 -lwinmm
+// g++ -std=c++20 -O2 -static-libgcc -static-libstdc++ -o SchwarzschildLightTravelDemo2D.exe SchwarzschildLightTravelDemo2D.cpp Ray.cpp RayTracer.cpp Body.cpp Vec3.cpp -lraylib -lopengl32 -lgdi32 -lwinmm
 
 
 #include "Vec3.h"

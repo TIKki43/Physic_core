@@ -4,10 +4,10 @@
 #include <cassert>
 
 void Vec3::Normalize() {
-    float length = this->Length();
-    assert (length > 0.00001f);
+    double length = this->Length();
+    assert (length > 0.00001);
 
-    float param = 1.0f / length;
+    double param = 1.0 / length;
     x *= param;
     y *= param;
     z *= param;
