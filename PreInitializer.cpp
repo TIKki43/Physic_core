@@ -65,8 +65,8 @@ namespace{
 
 void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
                                             (      WorldPhysics& World
-                                            , const std::string& FilePath
-                                            , const std::string& Epoch
+                                            , const std::string& FilePath // std::filesystem::path
+                                            , const std::string& Epoch   // std::chrono
                                             , const std::string& Frame
                                             , const std::string& Abcorr
                                             , const std::string& Observer
@@ -171,7 +171,7 @@ void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
         Vec3 position(planets[i].state[0] * 1000.0, planets[i].state[1] * 1000.0, planets[i].state[2] * 1000.0); // m
         Vec3 velocity(planets[i].state[3] * 1000.0, planets[i].state[4] * 1000.0, planets[i].state[5] * 1000.0); // m / s
         double MU_SI = planets[i].GM * 1e9; // m^3 * s^-2
-        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), planets[i].name);
+        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), planets[i].name);
         World.AddBody(Object);
     }
 
@@ -232,21 +232,52 @@ void PreInitializer::Missions::Cassini::SetPhysicalSolarSystem
 
         SpiceDouble GM{}; 
         SpiceDouble state[6]{};  // [0-2]pos km / [3-5]velocity km / s
+
+        double J2{};
+        double RefRadius{};
     };
 
-    std::array SunSystem{SpaceObject{"SUN"}};
-    std::array MercurySystem{SpaceObject{"MERCURY"}};
-    std::array VenusSystem{SpaceObject{"VENUS"}};
-    std::array EarthSystem{SpaceObject{"EARTH"}, SpaceObject{"MOON"}};
-    std::array MarsSystem{SpaceObject{"MARS"}, SpaceObject{"PHOBOS"}, SpaceObject{"DEIMOS"}};
+    std::array SunSystem{SpaceObject{
+        .name="SUN", 
+        .J2=Constants::AstroDynamicConstants::SunJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::SunRefRadius
+    }};
+    std::array MercurySystem{SpaceObject{
+        .name="MERCURY",
+        .J2=Constants::AstroDynamicConstants::MercuryJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::MercuryRefRadius
+    }};
+    std::array VenusSystem{SpaceObject{
+        .name="VENUS",
+        .J2=Constants::AstroDynamicConstants::VenusJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::VenusRefRadius
+    }};
+    std::array EarthSystem{SpaceObject{
+        .name="EARTH",
+        .J2=Constants::AstroDynamicConstants::EarthJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::EarthRefRadius
+    }                       , SpaceObject{"MOON"}};
+    std::array MarsSystem{SpaceObject{
+        .name="MARS",
+        .J2=Constants::AstroDynamicConstants::MarsJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::MarsRefRadius
+    }                       , SpaceObject{"PHOBOS"}, SpaceObject{"DEIMOS"}};
 
-    std::array JupiterSystem{ SpaceObject{"JUPITER"}, SpaceObject{"IO"}
+    std::array JupiterSystem{ SpaceObject{
+        .name="JUPITER",
+        .J2=Constants::AstroDynamicConstants::JupiterJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::JupiterRefRadius
+    }                       , SpaceObject{"IO"}
                             , SpaceObject{"EUROPA"}, SpaceObject{"GANYMEDE"}
                             , SpaceObject{"CALLISTO"}, SpaceObject{"AMALTHEA"}
                             , SpaceObject{"THEBE"}, SpaceObject{"ADRASTEA"}
                             , SpaceObject{"METIS"}};
 
-    std::array SaturnSystem{ SpaceObject{"SATURN"}, SpaceObject{"MIMAS"}
+    std::array SaturnSystem{ SpaceObject{
+        .name="SATURN",
+        .J2=Constants::AstroDynamicConstants::SaturnJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::SaturnRefRadius
+    }                      , SpaceObject{"MIMAS"}
                            , SpaceObject{"ENCELADUS"}, SpaceObject{"TETHYS"}
                            , SpaceObject{"DIONE"}, SpaceObject{"RHEA"}, SpaceObject{"TITAN"}
                            , SpaceObject{"HYPERION"}, SpaceObject{"IAPETUS"}
@@ -255,11 +286,19 @@ void PreInitializer::Missions::Cassini::SetPhysicalSolarSystem
                            , SpaceObject{"ATLAS"}, SpaceObject{"PROMETHEUS"}
                            , SpaceObject{"PANDORA"}};
 
-    std::array UranusSystem{ SpaceObject{"URANUS"}, SpaceObject{"ARIEL"}
+    std::array UranusSystem{ SpaceObject{
+        .name="URANUS",
+        .J2=Constants::AstroDynamicConstants::UranusJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::UranusRefRadius
+    }                      , SpaceObject{"ARIEL"}
                            , SpaceObject{"UMBRIEL"}, SpaceObject{"TITANIA"}
                            , SpaceObject{"OBERON"}, SpaceObject{"MIRANDA"}};
 
-    std::array NeptuneSystem{SpaceObject{"Neptune"}, SpaceObject{"TRITON"}};
+    std::array NeptuneSystem{SpaceObject{
+        .name="NEPTUNE",
+        .J2=Constants::AstroDynamicConstants::NeptuneJ2, 
+        .RefRadius=Constants::AstroDynamicConstants::NeptuneRefRadius
+    }, SpaceObject{"TRITON"}};
 
     std::array PlutoSystem{ SpaceObject{"PLUTO"}, SpaceObject{"CHARON"}
                           , SpaceObject{"NIX"}, SpaceObject{"HYDRA"}
@@ -277,7 +316,7 @@ void PreInitializer::Missions::Cassini::SetPhysicalSolarSystem
         std::span{NeptuneSystem},
         std::span{PlutoSystem},
     };
-
+    
     for (auto system: Systems){
         for (SpaceObject& obj: system){
             SpiceDouble lt{};
@@ -310,11 +349,57 @@ void PreInitializer::Missions::Cassini::SetPhysicalSolarSystem
                 panic("No enough data to bodvrd_c!");
             }
 
-
             Vec3 position(obj.state[0] * 1000.0, obj.state[1] * 1000.0, obj.state[2] * 1000.0); // m
             Vec3 velocity(obj.state[3] * 1000.0, obj.state[4] * 1000.0, obj.state[5] * 1000.0); // m / s
             double MU_SI = obj.GM * 1e9; // m^3 * s^-2
-            Body Object(velocity, position, MU_SI / Constants::G, Vec3(), obj.name);
+            
+            Vec3 SpinAxis{};
+            if (obj.J2 != 0.0) {
+                SpiceInt frameCode{};
+                SpiceChar bodyFrame[64]{};
+                SpiceBoolean found{};
+                // getting name
+                cnmfrm_c(obj.name, sizeof(bodyFrame), &frameCode, bodyFrame, &found);
+                if (!found)
+                {
+                    std::printf("%-18s : body-fixed frame not found\n", obj.name);
+                    kclear_c();
+                    panic("Can't find body-fixed frame!");
+                }
+                // getting rotation in et
+                SpiceDouble rotation[3][3]{};
+                pxform_c(bodyFrame, frame, et, rotation);
+                if (failed_c())
+                {
+                    SpiceChar message[1024];
+                    getmsg_c("LONG", sizeof(message), message);
+                    reset_c();
+
+                    std::printf(
+                        "%-18s : frame transformation unavailable -> %s\n",
+                        obj.name,
+                        message
+                    );
+
+                    kclear_c();
+                    panic("Can't transform spin axis!");
+                }
+
+                SpiceDouble localSpinAxis[3]{0.0, 0.0, 1.0};
+
+                SpiceDouble SpinAxisFrame[3]{};
+                mxv_c(rotation, localSpinAxis,  SpinAxisFrame);
+
+                SpinAxis = Vec3{
+                    SpinAxisFrame[0],
+                    SpinAxisFrame[1],
+                    SpinAxisFrame[2]
+                };
+
+                SpinAxis.Normalize();
+            }
+
+            Body Object(velocity, position, MU_SI / Constants::G, Vec3(), obj.J2, obj.RefRadius, SpinAxis, obj.name);
             World.AddBody(Object);
 
         }

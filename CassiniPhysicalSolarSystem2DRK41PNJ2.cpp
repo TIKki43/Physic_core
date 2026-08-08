@@ -1,9 +1,17 @@
 // COMPILE:
-//   g++ -std=c++20 -O2 -I . -I deps/cspice/include CassiniPhysicalSolarSystem2DRK4.cpp PreInitializer.cpp WorldPhysics.cpp Body.cpp Vec3.cpp Gravity.cpp Integrator.cpp Mat3.cpp deps/cspice/lib/libcspice.a -lraylib -lopengl32 -lgdi32 -lwinmm -static-libgcc -static-libstdc++ -o CassiniPhysicalSolarSystem2DRK4.exe
-//
-//   g++ -std=c++20 -O2 -I . -I deps/cspice/include CassiniPhysicalSolarSystem2DRK4.cpp PreInitializer.cpp WorldPhysics.cpp Body.cpp Vec3.cpp Gravity.cpp Integrator.cpp Mat3.cpp deps/cspice/lib/libcspice.a -lraylib -lopengl32 -lgdi32 -lwinmm -static-libgcc -static-libstdc++  -o CassiniPhysicalSolarSystem2DRK4.exe
+//   g++ -std=c++20 -O2 -Wall -Wextra -Werror -I . -I deps/cspice/include CassiniPhysicalSolarSystem2DRK41PNJ2.cpp PreInitializer.cpp WorldPhysics.cpp Body.cpp Vec3.cpp Gravity.cpp Integrator.cpp Mat3.cpp deps/cspice/lib/libcspice.a -lraylib -lopengl32 -lgdi32 -lwinmm -static-libgcc -static-libstdc++ -o CassiniPhysicalSolarSystem2DRK41PNJ2.exe
 // RUN:
-//   ./CassiniPhysicalSolarSystem2DRK4.exe
+//   ./CassiniPhysicalSolarSystem2DRK41PNJ2.exe
+//
+// Same scene, visualization, SPICE validation and CSV reporting as
+// CassiniPhysicalSolarSystem2DRK4.cpp, but stepped with the RK4 + 1PN + J2
+// pipeline (Integrator::RungeKutta4Integration1PNJ2).
+//
+// Force model, per Integrator::RungeKutta4Integration1PNJ2:
+//   - Newtonian point-mass gravity      : base acceleration
+//   - J2 oblateness                     : Newtonian correction, NOT divided by c^2
+//   - 1PN (Einstein-Infeld-Hoffmann)    : relativistic correction, divided by c^2
+// J2, reference radius and spin axis are per-body values carried on each Body
 
 #include "WorldPhysics.h"
 #include "PreInitializer.h"
@@ -28,15 +36,17 @@ static const char*  META_KERNEL          = "cas_2005_physicalcoords.tm";
 static const char*  INITIAL_EPOCH        = "2005-01-01T00:00:00";
 static const double PHYSICS_STEP_SECONDS = 900.0;             // seconds per physics step
 static double       simDaysPerSecond     = 8.0;                // simulation speed
-static const double TRAIL_SAMPLE_SECONDS = 3600.0;            // 1 h: fine enough to trace MOON orbits (was 1 day)
+static const double TRAIL_SAMPLE_SECONDS = 3600.0;            // 1 h: fine enough to trace MOON orbits
 static const int    MAX_TRAIL_POINTS     = 1200;              // 1200 h = 50 days of trail history per body
-static const double ERROR_SAMPLE_SECONDS = 86400.0;           // CSV error cadence stays daily (comparable to earlier runs)
+static const double ERROR_SAMPLE_SECONDS = 86400.0;           // CSV error cadence stays daily
 static const double MAX_ELAPSED_SECONDS  = 1825.0 * 86400.0;  // 5 years; loaded kernels cover all 46 bodies 2005..2010
+
+static const char*  CSV_NAME             = "IntegrationErrors_Physical_RK41PNJ2_900.csv";
 
 static const int    WINDOW               = 1000;
 
 static const double LIN_PX_PER_METER  = 450.0 / 4.6e12;
- // log reference radius 1e9 m
+
 static const double LOG_R0_EXP        = 9.0;
 static const double LOG_PX_PER_DECADE = 115.0;
 
@@ -69,8 +79,7 @@ static Vector2 worldToScreen(const Vec3& p) {
     return Vector2{ (float)(cx + sx * zoom), (float)(cy - sy * zoom) }; // invert screen Y
 }
 
-// Planet-relative projection used in focus mode (linear, no log): the body is
-// drawn at (p - ref) so a moon's orbit around its planet becomes visible
+
 static Vector2 focusScreen(const Vec3& p, const Vec3& ref, double scale) {
     double sx = (p.x - ref.x) * scale * zoom;
     double sy = (p.y - ref.y) * scale * zoom;
@@ -93,8 +102,6 @@ static bool sameName(const std::string& a, const char* b) {
     return i == a.size() && b[i] == '\0';
 }
 
-// A "primary" is the Sun or a planet; everything listed after it in the
-// initializer's system arrays is one of its moons.
 static bool isPrimary(const std::string& n) {
     static const char* primaries[] = { "SUN","MERCURY","VENUS","EARTH","MARS",
                                        "JUPITER","SATURN","URANUS","NEPTUNE","PLUTO" };
@@ -102,8 +109,7 @@ static bool isPrimary(const std::string& n) {
     return false;
 }
 
-// Physical bodies: the simulated body name IS the SPICE target (SUN, EARTH,
-// MOON, JUPITER, IO, ...). No " BARYCENTER" substitution anywhere.
+
 static std::string spiceTargetFor(const std::string& t) {
     return t;
 }
@@ -125,6 +131,10 @@ static bool querySpice(const std::string& target, double et, Vec3& outMeters, st
 }
 
 
+static bool isFiniteVec(const Vec3& v) {
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
+
 static void initScene(WorldPhysics& world, std::vector<BodyView>& views, double& initialET) {
     world = WorldPhysics{};  // fresh, empty world
 
@@ -145,11 +155,31 @@ static void initScene(WorldPhysics& world, std::vector<BodyView>& views, double&
     }
 }
 
+static void reportLoadedModel(const WorldPhysics& world) {
+    std::printf("\n--- RK4 + 1PN + J2 model ---\n");
+    std::printf("Loaded bodies : %d\n", (int)world.Bodies.size());
+    std::printf("c             : %.9g m/s\n", Constants::c);
+
+    int oblateCount = 0;
+    for (const Body& b : world.Bodies) {
+        if (b.GetJ2() == 0.0) continue;
+        ++oblateCount;
+        const Vec3   axis     = b.GetSpinAxis();
+        const double axisNorm = axis.Length();
+        std::printf("  %-10s J2 = %.9e   RefRadius = %.6e m   |spin| = %.9f\n",
+                    b.GetBodyType().c_str(), b.GetJ2(), b.GetRefRadius(), axisNorm);
+    }
+    std::printf("Bodies with nonzero J2 : %d\n", oblateCount);
+    std::printf("----------------------------\n\n");
+    std::fflush(stdout);
+}
+
 int main() {
     WorldPhysics world;
     std::vector<BodyView> views;
     double initialET = 0.0;
     initScene(world, views, initialET);
+    reportLoadedModel(world);
 
     const int n = (int)views.size();
     // simulated seconds past initialET(double)
@@ -160,6 +190,9 @@ int main() {
     bool        paused          = false;
     // non-empty -> freeze and show error
     std::string coverageError;
+    // non-empty -> integration produced NaN/Inf
+    std::string stateError;
+    long long   physicsStep     = 0;
 
     auto findIndex = [&](const char* nm) {
         for (int i = 0; i < (int)views.size(); ++i) if (views[i].name == nm) return i;
@@ -172,9 +205,29 @@ int main() {
     std::vector<Vec3> spiceNow(n);
     std::vector<bool> spiceNowOk(n, false);
 
-    // VISUALIZATION ONLY: map each body to its primary. The initializer emits bodies
-    // system by system with the planet first, so every non-primary belongs to the
-    // most recently seen primary. parentOf[i] < 0 means "i is itself a primary".
+    // Scan every body for a non-finite position or velocity. On the first bad
+    // body: record name, step and simulated time, print it, and stop stepping.
+    auto validateState = [&]() {
+        for (int i = 0; i < n; ++i) {
+            const Vec3 p = world.Bodies[i].GetPosition();
+            const Vec3 v = world.Bodies[i].GetVelocity();
+            if (isFiniteVec(p) && isFiniteVec(v)) continue;
+
+            stateError = "INVALID STATE | body=" + views[i].name +
+                         "  step=" + std::to_string(physicsStep) +
+                         "  t=" + std::to_string(elapsed) + " s (" +
+                         std::to_string(elapsed / 86400.0) + " days)";
+            std::fprintf(stderr,
+                         "\n*** %s\n*** pos = (%g, %g, %g)  vel = (%g, %g, %g)\n"
+                         "*** Simulation stopped.\n\n",
+                         stateError.c_str(), p.x, p.y, p.z, v.x, v.y, v.z);
+            std::fflush(stderr);
+            return false;
+        }
+        return true;
+    };
+
+
     std::vector<int> parentOf(n, -1);
     {
         int current = -1;
@@ -183,21 +236,21 @@ int main() {
             else                          { parentOf[i] = current; }
         }
     }
-    // Focus targets = primaries that actually have moons (skip Sun/Mercury/Venus).
+
     std::vector<int> focusable;
     for (int i = 0; i < n; ++i) {
         if (parentOf[i] >= 0) continue;
         for (int j = 0; j < n; ++j) if (parentOf[j] == i) { focusable.push_back(i); break; }
     }
 
-    std::ofstream errorCsv("IntegrationErrors_Physical_RK41PN_450.csv"); // physical bodies, RK4, 450 s step
-    if (!errorCsv.is_open()) std::fprintf(stderr, "Cannot open IntegrationErrors_Physical_RK4_450.csv\n");
+    std::ofstream errorCsv(CSV_NAME); // physical bodies, RK4 + 1PN + J2, 900 s step
+    if (!errorCsv.is_open()) std::fprintf(stderr, "Cannot open %s\n", CSV_NAME);
     errorCsv.precision(15);
     errorCsv << "elapsed_seconds,elapsed_days,earth_ssb_error_km,earth_heliocentric_error_km,"
                 "saturn_ssb_error_km,saturn_heliocentric_error_km\n";
     double lastErrorSample = 0.0;
 
-    InitWindow(WINDOW, WINDOW, "Cassini Physical Solar System[RK4]: WorldPhysics simulation(cyan) vs SPICE reference(orange)");
+    InitWindow(WINDOW, WINDOW, "Cassini Physical Solar System[RK4+1PN+J2]: WorldPhysics simulation(cyan) vs SPICE reference(orange)");
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
@@ -205,15 +258,17 @@ int main() {
         if (IsKeyPressed(KEY_L))     logMode = !logMode;
         if (IsKeyPressed(KEY_R)) {
             initScene(world, views, initialET);
+            reportLoadedModel(world);
             idxSun = findIndex("SUN");
             idxEarth = findIndex("EARTH");
             idxSaturn = findIndex("SATURN");
             elapsed = 0.0; accumulator = 0.0; lastTrailSample = -TRAIL_SAMPLE_SECONDS;
             lastErrorSample = 0.0;
-            coverageError.clear(); paused = false;
+            physicsStep = 0;
+            coverageError.clear(); stateError.clear(); paused = false;
             spiceNow.assign(n, Vec3()); spiceNowOk.assign(n, false);
         }
-        // VISUALIZATION ONLY: cycle the focused system (-1 -> EARTH -> MARS -> ... -> back)
+
         if (IsKeyPressed(KEY_F) && !focusable.empty()) {
             int slot = -1;
             for (int k = 0; k < (int)focusable.size(); ++k) if (focusable[k] == focusIndex) { slot = k; break; }
@@ -221,15 +276,15 @@ int main() {
             focusIndex = (slot >= (int)focusable.size()) ? -1 : focusable[slot];
             zoom = 1.0; panX = 0.0; panY = 0.0;   // reset view when switching
         }
-        if (IsKeyPressed(KEY_EQUAL) and IsKeyPressed(KEY_KP_ADD))      simDaysPerSecond *= 1.5;
-        if (IsKeyPressed(KEY_MINUS) and IsKeyPressed(KEY_KP_SUBTRACT)) simDaysPerSecond /= 1.5;
+        if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD))      simDaysPerSecond *= 1.5;
+        if (IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_SUBTRACT)) simDaysPerSecond /= 1.5;
         double wheel = GetMouseWheelMove();
         if (wheel != 0.0) { zoom *= std::pow(1.1, wheel); if (zoom < 0.05) zoom = 0.05; if (zoom > 80.0) zoom = 80.0; }
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) { Vector2 d = GetMouseDelta(); panX += d.x; panY += d.y; }
 
-        if (!paused && coverageError.empty()) {
+        if (!paused && coverageError.empty() && stateError.empty()) {
             double dtReal = GetFrameTime();
-            // avoid spiral-of-death after a stall
+
             if (dtReal > 0.1) dtReal = 0.1;
             // real seconds -> simulated seconds
             accumulator += dtReal * simDaysPerSecond * 86400.0;
@@ -237,13 +292,17 @@ int main() {
             int guard = 0;
             while (accumulator >= PHYSICS_STEP_SECONDS &&
                    elapsed < MAX_ELAPSED_SECONDS &&
-                   coverageError.empty() && guard < 5000) {
+                   coverageError.empty() && stateError.empty() && guard < 5000) {
 
-                // RK4 step
-                world.Euler.RungeKutta4Integration1PN(world.Bodies, world.GravityModel, (float)PHYSICS_STEP_SECONDS);
+                // RK4 + 1PN + J2 step. J2 / reference radius / spin axis are read
+                // per-body inside the integrator
+                world.Euler.RungeKutta4Integration1PNJ2(world.Bodies, world.GravityModel, (float)PHYSICS_STEP_SECONDS);
                 elapsed     += PHYSICS_STEP_SECONDS;
                 accumulator -= PHYSICS_STEP_SECONDS;
+                ++physicsStep;
                 ++guard;
+
+                if (!validateState()) break;
 
                 if (elapsed - lastTrailSample >= TRAIL_SAMPLE_SECONDS) {
                     double et = initialET + elapsed;
@@ -308,11 +367,7 @@ int main() {
         et2utc_c(etNow, "ISOC", 3, sizeof(utc), utc);
         if (failed_c()) reset_c();
 
-        // ---- VISUALIZATION ONLY: pick projection + which bodies to draw -------
-        // Solar view : primaries only (moons are sub-pixel there, and drawing all
-        //              46 labels just piles text on top of itself).
-        // Focus view : the focused planet + its moons, drawn PLANET-RELATIVE and
-        //              auto-scaled so the widest moon orbit fills the window.
+
         double focusScale = 1.0;
         if (focusIndex >= 0) {
             const Vec3 fp = world.Bodies[focusIndex].GetPosition();
@@ -336,9 +391,6 @@ int main() {
 
         for (int i = 0; i < n; ++i) {
             if (!drawn(i)) continue;
-            // In focus mode each trail point is plotted relative to the focused
-            // body AT THE SAME SAMPLE TIME (index k), so the planet's own motion
-            // is removed and the moon's orbit shows up as a closed loop.
             const auto& st = views[i].simTrail;
             const auto& fst = views[focusIndex < 0 ? i : focusIndex].simTrail;
             size_t nst = (focusIndex < 0) ? st.size() : std::min(st.size(), fst.size());
@@ -376,11 +428,11 @@ int main() {
 
         DrawRectangle(0, 0, 470, 210, Color{ 0, 0, 0, 170 });
         int y = 8; const int dy = 18;
-        DrawText("Legend:  SIM = cyan   SPICE reference = orange   [RK4]", 10, y, 14, RAYWHITE); y += dy;
+        DrawText("Legend:  SIM = cyan   SPICE reference = orange   [RK4+1PN+J2]", 10, y, 14, RAYWHITE); y += dy;
         DrawText(TextFormat("Start epoch : %s UTC   Bodies: %d (physical)", INITIAL_EPOCH, n), 10, y, 14, RAYWHITE); y += dy;
         DrawText(TextFormat("Elapsed     : %.3f days   (%.0f s)", elapsed / 86400.0, elapsed), 10, y, 14, RAYWHITE); y += dy;
         DrawText(TextFormat("SPICE epoch : %s  (ET %.1f)", utc, etNow), 10, y, 14, RAYWHITE); y += dy;
-        DrawText(TextFormat("Integrator  : RK4    Physics step: %.0f s   Speed: %.2f sim-days/s", PHYSICS_STEP_SECONDS, simDaysPerSecond), 10, y, 14, RAYWHITE); y += dy;
+        DrawText(TextFormat("Integrator  : RK4+1PN+J2  Physics step: %.0f s   Speed: %.2f sim-days/s", PHYSICS_STEP_SECONDS, simDaysPerSecond), 10, y, 14, RAYWHITE); y += dy;
         DrawText(TextFormat("View: %s   Scale: %s   Zoom: %.2f   %s",
                             focusIndex < 0 ? "SOLAR SYSTEM" : views[focusIndex].name.c_str(),
                             logMode ? "LOG" : "LINEAR", zoom, paused ? "[PAUSED]" : "[running]"),
@@ -389,8 +441,14 @@ int main() {
                  10, y, 14, SKYBLUE); y += dy;
         DrawText(saturnErrKm >= 0 ? TextFormat("SATURN sim-vs-SPICE error : %12.1f km", saturnErrKm) : "SATURN error : n/a",
                  10, y, 14, ORANGE); y += dy;
-        DrawText("F focus planet system (see moons) | SPACE pause | R restart | L lin/log | wheel zoom | drag pan | ESC",
+        DrawText("F focus planet system (see moons) | SPACE pause | R restart | L lin/log | +/- speed | wheel zoom | drag pan | ESC",
                  10, y, 12, LIGHTGRAY); y += dy;
+
+        if (!stateError.empty()) {
+            DrawRectangle(0, WINDOW - 92, WINDOW, 46, Color{ 60, 0, 0, 200 });
+            DrawText("NUMERICAL FAILURE (simulation stopped):", 10, WINDOW - 88, 14, RED);
+            DrawText(stateError.c_str(), 10, WINDOW - 68, 12, Color{ 255, 180, 180, 255 });
+        }
 
         if (!coverageError.empty()) {
             DrawRectangle(0, WINDOW - 46, WINDOW, 46, Color{ 60, 0, 0, 200 });
