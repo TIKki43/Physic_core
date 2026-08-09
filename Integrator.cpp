@@ -309,7 +309,7 @@ void Integrator::RungeKutta4Integration1PNJ2(std::vector<Body> &Bodies, const Gr
 
                 newtonAcc[a] += DistanceDif * (muB / r3);
                 potential[a] += muB / r;
-                if (Bodies[b].GetJ2() != 0.0 and Bodies[b].GetRefRadius() > 0.0){
+                if (Bodies[b].GetJ2() != 0.0 && Bodies[b].GetRefRadius() > 0.0 && Bodies[a].GetJ2() != 0.0 && Bodies[a].GetRefRadius() > 0.0){
                     Vec3 reversedDistance = xA - xB;
                     accelerationj2[a] += GravityModel.ComputeJ2Acceleration(reversedDistance, muB, Bodies[b].GetJ2(), Bodies[b].GetRefRadius(), Bodies[b].GetSpinAxis());
                 }

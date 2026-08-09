@@ -406,3 +406,125 @@ void PreInitializer::Missions::Cassini::SetPhysicalSolarSystem
     }
 
 }
+
+void PreInitializer::Missions::Cassini::SetMajorAsteroids
+                                            (      WorldPhysics& World
+                                            , const std::string& FilePath // std::filesystem::path
+                                            , const std::string& Epoch   // std::chrono
+                                            , const std::string& Frame
+                                            , const std::string& Abcorr
+                                            , const std::string& Observer
+                                            )
+{   
+   
+
+    SpiceChar noErrorPrint[]{"NONE"};
+    SpiceChar returnAction[]{"RETURN"};
+    
+    erract_c("SET", 0, returnAction);
+    errprt_c("SET", 0, noErrorPrint);
+
+    // Reading meta-kernel
+    furnsh_c(FilePath.c_str());
+    if (failed_c()) {
+        SpiceChar message[1024];
+        getmsg_c("LONG", sizeof(message), message);
+        reset_c();
+        kclear_c();
+
+        std::printf("Meta-kernel error: %s\n", message);
+        panic("Can't read meta-kernel!");
+    }
+    
+
+    // Epoch: 2005-01-01T00:00:00 UTC  -> ephemeris time(ET, seconds past J2000 TDB)
+    SpiceDouble et{};
+    str2et_c(Epoch.c_str(), &et);
+    if (failed_c()) {
+        SpiceChar message[1024];
+        getmsg_c("LONG", sizeof(message), message);
+        reset_c();
+        kclear_c();
+
+        std::printf("Epoch error: %s\n", message);
+        panic("Can't find epoch in time intervals!");
+    }
+
+    
+    // (J2000) inertial reference frame
+    const SpiceChar* frame = Frame.c_str();
+    // (None) geometric(no aberration)                 
+    const SpiceChar* abcorr = Abcorr.c_str();
+    // SSB observer                  
+    const SpiceChar* observer = Observer.c_str(); 
+
+    
+    struct Asteroid { 
+        const SpiceChar* ID; 
+        SpiceInt ID_gm; 
+        const SpiceChar* Name;
+
+        SpiceDouble GM{}; 
+        SpiceDouble State[6]{};  // [0-2]pos km / [3-5]velocity km / s
+    };
+
+    std::array Asteroids{
+        Asteroid{"20000001", 2000001, "Ceres"},
+        Asteroid{"20000002", 2000002, "Pallas"},
+        Asteroid{"20000003", 2000003, "Juno"},
+        Asteroid{"20000004", 2000004, "Vesta"},
+        Asteroid{"20000007", 2000007, "Iris"},
+        Asteroid{"20000010", 2000010, "Hygiea"},
+        Asteroid{"20000015", 2000015, "Eunomia"},
+        Asteroid{"20000016", 2000016, "Psyche"},
+        Asteroid{"20000031", 2000031, "Euphrosyne"},
+        Asteroid{"20000052", 2000052, "Europa_Asteroid"},
+        Asteroid{"20000065", 2000065, "Cybele"},
+        Asteroid{"20000087", 2000087, "Sylvia"},
+        Asteroid{"20000088", 2000088, "Thisbe"},
+        Asteroid{"20000107", 2000107, "Camilla"},
+        Asteroid{"20000511", 2000511, "Davida"},
+        Asteroid{"20000704", 2000704, "Interamnia"},
+    };
+
+    for (std::size_t i{}; i < Asteroids.size(); ++i) {
+        SpiceDouble lt{};
+        SpiceInt dimension{};
+        spkezr_c(Asteroids[i].ID, et, frame, abcorr, observer, Asteroids[i].State, &lt);
+        if (failed_c()) {
+            SpiceChar shortmsg[26];
+            getmsg_c("SHORT", sizeof(shortmsg), shortmsg);
+            reset_c();
+            std::printf("%-18s : unavailable -> %s\n", Asteroids[i].Name, shortmsg);
+            kclear_c();
+            panic("No enough data to spkezr_c!");
+        }
+
+        std::printf("%-18s : X = %20.3f   Y = %20.3f   Z = %20.3f  [km]\n",
+                    Asteroids[i].Name, Asteroids[i].State[0], Asteroids[i].State[1], Asteroids[i].State[2]);
+
+        bodvcd_c(Asteroids[i].ID_gm, "GM", 1, &dimension, &Asteroids[i].GM);
+        if (failed_c()) {
+            SpiceChar message[1024];
+            getmsg_c("LONG", sizeof(message), message);
+            reset_c();
+
+            std::printf(
+                "%-18s : GM unavailable -> %s\n",
+                Asteroids[i].Name,
+                message
+            );
+            kclear_c();
+            panic("No enough data to bodvcd_c!");
+        }
+    }
+
+    for (std::size_t i{}; i < Asteroids.size(); i++){
+        Vec3 position(Asteroids[i].State[0] * 1000.0, Asteroids[i].State[1] * 1000.0, Asteroids[i].State[2] * 1000.0); // m
+        Vec3 velocity(Asteroids[i].State[3] * 1000.0, Asteroids[i].State[4] * 1000.0, Asteroids[i].State[5] * 1000.0); // m / s
+        double MU_SI = Asteroids[i].GM * 1e9; // m^3 * s^-2
+        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), Asteroids[i].Name);
+        World.AddBody(Object);
+    }
+
+}

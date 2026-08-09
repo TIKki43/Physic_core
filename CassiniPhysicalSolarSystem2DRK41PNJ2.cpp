@@ -41,7 +41,7 @@ static const int    MAX_TRAIL_POINTS     = 1200;              // 1200 h = 50 day
 static const double ERROR_SAMPLE_SECONDS = 86400.0;           // CSV error cadence stays daily
 static const double MAX_ELAPSED_SECONDS  = 1825.0 * 86400.0;  // 5 years; loaded kernels cover all 46 bodies 2005..2010
 
-static const char*  CSV_NAME             = "IntegrationErrors_Physical_RK41PNJ2_900.csv";
+static const char*  CSV_NAME             = "IntegrationErrors_Physical_RK41PNJ2_Asteroids_900.csv";
 
 static const int    WINDOW               = 1000;
 
@@ -111,6 +111,23 @@ static bool isPrimary(const std::string& n) {
 
 
 static std::string spiceTargetFor(const std::string& t) {
+    if (t == "Ceres") return "20000001";
+    if (t == "Pallas") return "20000002";
+    if (t == "Juno") return "20000003";
+    if (t == "Vesta") return "20000004";
+    if (t == "Iris") return "20000007";
+    if (t == "Hygiea") return "20000010";
+    if (t == "Eunomia") return "20000015";
+    if (t == "Psyche") return "20000016";
+    if (t == "Euphrosyne") return "20000031";
+    if (t == "Europa_Asteroid") return "20000052";
+    if (t == "Cybele") return "20000065";
+    if (t == "Sylvia") return "20000087";
+    if (t == "Thisbe") return "20000088";
+    if (t == "Camilla") return "20000107";
+    if (t == "Davida") return "20000511";
+    if (t == "Interamnia") return "20000704";
+
     return t;
 }
 
@@ -140,7 +157,10 @@ static void initScene(WorldPhysics& world, std::vector<BodyView>& views, double&
 
     PreInitializer::Missions::Cassini::SetPhysicalSolarSystem(
         world, META_KERNEL, INITIAL_EPOCH, "J2000", "NONE", "SOLAR SYSTEM BARYCENTER");
+    PreInitializer::Missions::Cassini::SetMajorAsteroids(
+        world, META_KERNEL, INITIAL_EPOCH, "J2000", "NONE", "SOLAR SYSTEM BARYCENTER");
 
+    
     erract_c("SET", 0, (SpiceChar*)"RETURN");
     errprt_c("SET", 0, (SpiceChar*)"NONE");
     furnsh_c(META_KERNEL);
