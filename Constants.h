@@ -4,7 +4,7 @@ namespace Constants{
     inline constexpr double G{6.67430e-11}; // m^3 * kg^-1 * s^-2
     inline constexpr double c{299792458.0}; // m/s
 
-    inline constexpr float DefaultDeltaTime{0.001f};
+    inline constexpr double DefaultDeltaTime{0.001f};
     namespace AstroDynamicConstants{
         inline constexpr double SunJ2{2.000000000e-7};
         inline constexpr double MercuryJ2{5.031720235e-5};

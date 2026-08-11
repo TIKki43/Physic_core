@@ -8,10 +8,6 @@
 
 namespace PreInitializer{
 
-    enum class Observers{
-
-    };
-
     void SetOrbit(Body& OrbitingBody, Body& CentralBody, const float SemiMajorAxis, const float Eccentricity,
          const float Inclination, const float AscendingLongitude, const float Periapsis, const float MeanAnomaly);
     namespace Missions{

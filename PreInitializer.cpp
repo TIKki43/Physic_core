@@ -171,7 +171,7 @@ void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
         Vec3 position(planets[i].state[0] * 1000.0, planets[i].state[1] * 1000.0, planets[i].state[2] * 1000.0); // m
         Vec3 velocity(planets[i].state[3] * 1000.0, planets[i].state[4] * 1000.0, planets[i].state[5] * 1000.0); // m / s
         double MU_SI = planets[i].GM * 1e9; // m^3 * s^-2
-        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), planets[i].name);
+        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), planets[i].bary);
         World.AddBody(Object);
     }
 
@@ -523,7 +523,7 @@ void PreInitializer::Missions::Cassini::SetMajorAsteroids
         Vec3 position(Asteroids[i].State[0] * 1000.0, Asteroids[i].State[1] * 1000.0, Asteroids[i].State[2] * 1000.0); // m
         Vec3 velocity(Asteroids[i].State[3] * 1000.0, Asteroids[i].State[4] * 1000.0, Asteroids[i].State[5] * 1000.0); // m / s
         double MU_SI = Asteroids[i].GM * 1e9; // m^3 * s^-2
-        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), Asteroids[i].Name);
+        Body Object(velocity, position, MU_SI / Constants::G, Vec3(), 0.0, 0.0, Vec3(), Asteroids[i].ID);
         World.AddBody(Object);
     }
 

@@ -17,7 +17,6 @@ public:
     void AddBody(const Body& Some);
     void AddBody(Body&& Some);
 
-    Integrator Euler;
     Gravity GravityModel;
     std::vector<Body> Bodies;
 

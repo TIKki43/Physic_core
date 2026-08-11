@@ -20,7 +20,7 @@ void WorldPhysics::SimulationStep(float DeltaTime){
         }
     }
     for (std::size_t i{}; i < Bodies.size(); ++i){
-        Euler.EulerIntegration(Bodies[i], Forces[i], DeltaTime);
+        Integrator::EulerIntegration(Bodies[i], Forces[i], DeltaTime);
     }
 }
 

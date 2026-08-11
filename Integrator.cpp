@@ -12,7 +12,7 @@ using std::fma;
     return Vec3{std::fma(a.x, b, c.x), std::fma(a.y, b, c.y), std::fma(a.z, b, c.z)};
 }
 
-void Integrator::EulerIntegration(Body& BodyA, const Vec3& Force, float DeltaTime){
+void Integrator::EulerIntegration(Body& BodyA, const Vec3& Force, double DeltaTime){
     const Vec3 Acceleration = Force / BodyA.GetMass();
     BodyA.SetVelocity(fma(Acceleration, DeltaTime, BodyA.GetVelocity())); // v = v + a * dt
     BodyA.SetPosition(fma(BodyA.GetVelocity(), DeltaTime, BodyA.GetPosition())); // x = x + v * dt
@@ -21,7 +21,7 @@ void Integrator::EulerIntegration(Body& BodyA, const Vec3& Force, float DeltaTim
 
 void Integrator::RungeKutta4Integration1PN(std::vector<Body>& Bodies,
                                         Gravity& GravityModel,
-                                        float DeltaTime) {
+                                        double DeltaTime) {
     (void)GravityModel;
 
     const std::size_t size{Bodies.size()};
@@ -187,7 +187,7 @@ void Integrator::RungeKutta4Integration1PN(std::vector<Body>& Bodies,
 
 void Integrator::RungeKutta4Integration(std::vector<Body>& Bodies,
                                         Gravity& GravityModel,
-                                        float DeltaTime) {
+                                        double DeltaTime) {
     const std::size_t size{Bodies.size()};
     if (size == 0) [[unlikely]] { return; }
 
@@ -274,7 +274,7 @@ void Integrator::RungeKutta4Integration(std::vector<Body>& Bodies,
 
 
 
-void Integrator::RungeKutta4Integration1PNJ2(std::vector<Body> &Bodies, const Gravity &GravityModel, float DeltaTime)
+void Integrator::RungeKutta4Integration1PNJ2(std::vector<Body> &Bodies, const Gravity &GravityModel, double DeltaTime)
 {
     const std::size_t size{Bodies.size()};
     if (size == 0) [[unlikely]] { return; }
