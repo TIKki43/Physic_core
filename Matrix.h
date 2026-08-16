@@ -73,9 +73,24 @@ public:
         return *this;
     }
 
+    template<typename... Indices>
+    // requires(sizeof...(Indices) == Rank(ToDo expr))
+    T& operator[](Indices... idxs){
+        if (sizeof...(Indices) != Rank) { throw std::invalid_argument("Incorrect number of indices") };
+        std::size_t indices[]{static_cast<std::size_t>(idxs)...};
+        std::size_t Step{};
+        for (std::size_t idx{}; idx < Rank; ++idx){
+            if (indices[idx] >= Shape[idx]) { throw std::out_of_range("Matrix index out of range") };
+            Step = Step * Shape[idx] + indices[idx]; // multi rows * cols + cols
+        }
+        return Data[Step];
+    }
+
     ~Matrix() { delete[] Data; delete[] Shape; }
 }; 
-// 1 2 3    2 4 6
-// 4 5 7    7 6 0
-// 3 5 8 ,  5 2 2 Shapes = (rows, cols, batch, global_pull)
-// 1 2 3 4 5 7 3 5 8 ! 2 4 6 7 6 0 5 2 2 
+// 1 2 3   2 4 6
+// 4 5 7   7 6 0
+// 3 5 8   8 0 4
+// 5 1 9,  5 2 2 Shapes = (rows, cols, batch, t) [2, 1] [1, 1, 1](Shapes = (4, 3, 2))  [0]
+// Size = rows * cols * batch * ... * N * sizeof(T); el = A[rows - 2, cols - 1, batch - 0]
+// 1 2 3 4 5 7 3 5 8 5 1 9 !!!!! 2 4 6 7 6 0 8 0 4 5 2 2 
