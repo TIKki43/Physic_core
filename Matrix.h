@@ -2,7 +2,7 @@
 #include <cstddef>    // std::size_t
 #include <algorithm>  // std::copy, std::swap
 #include <initializer_list>
-
+#include <stdexcept>
 
 template<typename T>
 class Matrix{
@@ -76,11 +76,11 @@ public:
     template<typename... Indices>
     // requires(sizeof...(Indices) == Rank(ToDo expr))
     T& operator[](Indices... idxs){
-        if (sizeof...(Indices) != Rank) { throw std::invalid_argument("Incorrect number of indices") };
+        if (sizeof...(Indices) != Rank) { throw std::invalid_argument("Incorrect number of indices"); }
         std::size_t indices[]{static_cast<std::size_t>(idxs)...};
         std::size_t Step{};
         for (std::size_t idx{}; idx < Rank; ++idx){
-            if (indices[idx] >= Shape[idx]) { throw std::out_of_range("Matrix index out of range") };
+            if (indices[idx] >= Shape[idx]) { throw std::out_of_range("Matrix index out of range"); }
             Step = Step * Shape[idx] + indices[idx]; // multi rows * cols + cols
         }
         return Data[Step];

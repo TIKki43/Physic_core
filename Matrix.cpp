@@ -1,5 +1,5 @@
 #include "Matrix.h"
-
+#include <iostream>
 
 
 
@@ -52,9 +52,10 @@
 
 
 int main() {
-    Matrix<int> A;
+    // Matrix<int> A;
     int a[6]{1, 2, 3, 4, 5, 6};
     Matrix A(a, {2, 3});          // 2D
+    std::cout << A[0, 0];
 
     int b[24]{};
     Matrix<int> B(b, {2, 3, 4});       // 3D
