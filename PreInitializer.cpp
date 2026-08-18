@@ -1,5 +1,6 @@
 #include "PreInitializer.h"
 #include "Mat3.h"
+#include "Utils.h"
 #include <cmath>
 #include <stdexcept>
 #include <iostream>
@@ -56,12 +57,6 @@ void PreInitializer::SetOrbit(
     OrbitingBody.SetVelocity(CentralBody.GetVelocity() + GeneralRotation * v_3d);
 };
 
-namespace{
-    [[noreturn]] void panic(const std::string& message) {
-    std::cerr << message << std::endl;
-    std::abort();
-    };
-}
 
 void PreInitializer::Missions::Cassini::SetBarycenterSolarSystem
                                             (      WorldPhysics& World
